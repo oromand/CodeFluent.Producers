@@ -121,49 +121,128 @@ namespace CodeFluent.Producers.WebApiController
             if (method != null)
             {
                 List<string> parameterArray = new List<string>();
-                foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
-                {
-                    parameterArray.Add(parameter.ClrFullTypeName + " " + parameter.Name);
-                }
+                _getTypesParamForMethod(method, parameterArray);
 
-                result = string.Join(",", parameterArray);
+                result = string.Join(", ", parameterArray);
             }
             return result;
         }
-        public string getUrlParamForMethod(CodeFluent.Model.Code.Method method)
+        public string getTypedParamForMethodOffsetLimit(CodeFluent.Model.Code.Method method)
         {
             string result = "";
             if (method != null)
             {
                 List<string> parameterArray = new List<string>();
-                foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
+                parameterArray.Add("int offset");
+                parameterArray.Add("int limit");
+
+                _getTypesParamForMethod(method, parameterArray);
+
+                result = string.Join(", ", parameterArray);
+            }
+            return result;
+        }
+
+        private static void _getTypesParamForMethod(CodeFluent.Model.Code.Method method, List<string> parameterArray)
+        {
+            foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
+            {
+                if (parameter.ClrFullTypeName.Contains("[]"))
                 {
-                    if (parameter.ClrFullTypeName == "System.String")
-                    {
-                        parameterArray.Add("{" + parameter.Name + "}");
-                    }
-                    else
-                    {
-                        parameterArray.Add("{" + parameter.Name + ":" + WebApiUtils.getWebApiUrlTypeFromDbType(parameter.DbType) + "}");
-                    }
+                    parameterArray.Add("[FromUri]" + parameter.ClrFullTypeName + " " + parameter.Name);
                 }
+                else
+                {
+                    parameterArray.Add(parameter.ClrFullTypeName + " " + parameter.Name);
+                }
+            }
+        }
+
+
+
+        public string getUrlParamForMethodOffsetLimit(CodeFluent.Model.Code.Method method)
+        {
+            string result = "";
+            if (method != null)
+            {
+                List<string> parameterArray = new List<string>();
+                parameterArray.Add("{offset:int}");
+                parameterArray.Add("{limit:int}");
+
+                parameterArray.AddRange(_getUrlParamForMethod(method));
+
 
                 result = string.Join("/", parameterArray);
             }
             return result;
         }
+
+        private static List<string> _getUrlParamForMethod(CodeFluent.Model.Code.Method method)
+        {
+            List<string> parameterArray = new List<string>();
+            foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
+            {
+                if (parameter.ClrFullTypeName == "System.String")
+                {
+                    parameterArray.Add("{" + parameter.Name + "}");
+                }
+                else if (parameter.ClrFullTypeName.Contains("[]"))
+                {
+                    //nothing to do
+                }
+                else
+                {
+                    parameterArray.Add("{" + parameter.Name + ":" + WebApiUtils.getWebApiUrlTypeFromDbType(parameter.DbType) + "}");
+                }
+            }
+
+            return parameterArray;
+        }
+
         public string getParamForMethod(CodeFluent.Model.Code.Method method)
         {
             string result = "";
             if (method != null)
             {
                 List<string> parameterArray = new List<string>();
-                foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
-                {
-                    parameterArray.Add(parameter.Name);
-                }
+                _getParamForMethod(method, parameterArray);
 
-                result = string.Join(",", parameterArray);
+                result = string.Join(", ", parameterArray);
+            }
+            return result;
+        }
+        public string getParamForMethodOffsetLimit(CodeFluent.Model.Code.Method method)
+        {
+            string result = "";
+            if (method != null)
+            {
+                List<string> parameterArray = new List<string>();
+                parameterArray.Add("offset");
+                parameterArray.Add("limit");
+
+                _getParamForMethod(method, parameterArray);
+
+                result = string.Join(", ", parameterArray);
+            }
+            return result;
+        }
+
+        private static void _getParamForMethod(CodeFluent.Model.Code.Method method, List<string> parameterArray)
+        {
+            foreach (CodeFluent.Model.Code.MethodParameter parameter in method.Parameters)
+            {
+                parameterArray.Add(parameter.Name);
+            }
+        }
+
+        public string getUrlParamForMethod(CodeFluent.Model.Code.Method method)
+        {
+            string result = "";
+            if (method != null)
+            {
+                List<string> parameterArray = _getUrlParamForMethod(method);
+
+                result = string.Join("/", parameterArray);
             }
             return result;
         }
@@ -181,7 +260,7 @@ namespace CodeFluent.Producers.WebApiController
             string result = "";
             if (method != null)
             {
-                if (method.ReturnTypeName != null)
+                if (method.IsDistinct)
                 {
                     result = method.ReturnTypeName;
                 }
@@ -263,13 +342,40 @@ namespace CodeFluent.Producers.WebApiController
             List<string> parameterArray = new List<string>();
             foreach (CodeFluent.Model.Property property in Entity.AllKeyProperties)
             {
-                //TODO if typename is string 
-                parameterArray.Add("{" + property.Name + ":" + property.TypeName.ToLower() + "}");
+                if (property.ClrFullTypeName == "System.String")
+                {
+                    parameterArray.Add("{" + property.Name + "}");
+                }
+                else
+                {
+                    parameterArray.Add("{" + property.Name + ":" + WebApiUtils.getWebApiUrlTypeFromDbType(property.Column.DbType) + "}");
+                }
+
             }
 
             result = string.Join("/", parameterArray);
             return result;
 
+        }
+
+        public string getRouteSchema()
+        {
+            string result = "";
+            if (Entity.Schema != null && Entity.Schema != "")
+            {
+                result = Entity.Schema + "/";
+            }
+            return result;
+        }
+
+        public string getDeleteMethod()
+        {
+            string result = "Delete";
+            if (this.Entity.Methods.Where(m => m.Name.Contains("DeleteById")).FirstOrDefault() != null)
+            {
+                result = "DeleteById";
+            }
+            return result;
         }
     }
 

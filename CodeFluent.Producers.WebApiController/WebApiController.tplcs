@@ -25,9 +25,11 @@ namespace [%=TemplateProducer.Entity.Namespace%].Web.ApiControllers
 
 	[% if(TemplateProducer.AssociatedAuthorize != null && TemplateProducer.AssociatedAuthorize != "") { %]
 	[Authorize(Roles = "[%=TemplateProducer.AssociatedAuthorize%]")]
+	[% } else { %]
+    [Authorize()]
 	[% } %]
 
-	[RoutePrefix("api/[%=entitySchema%]/[%=entityName%]")]
+	[RoutePrefix("api/[%=TemplateProducer.getRouteSchema()%][%=entityName%]")]
     public partial class [%=entityName%]Controller: [%=TemplateProducer.AssociatedBaseClass%] 
     {
 
@@ -63,6 +65,18 @@ namespace [%=TemplateProducer.Entity.Namespace%].Web.ApiControllers
         {
             return Ok([%=TemplateProducer.getLocationForMethod(method)%].[%=method.Name%]([%=TemplateProducer.getParamForMethod(method)%]));
         }
+		[%			if(!method.IsDistinct && method.MethodType != CodeFluent.Model.Code.MethodType.Delete && method.MethodType != CodeFluent.Model.Code.MethodType.Count) {
+		
+		%]
+		[HttpGet]
+        [Route("[%=method.Name%]OffsetLimit/[%=TemplateProducer.getUrlParamForMethodOffsetLimit(method)%]")]
+        public virtual IHttpActionResult [%=method.Name%]OffsetLimit([%=TemplateProducer.getTypedParamForMethodOffsetLimit(method)%])
+        {
+            return Ok([%=TemplateProducer.getLocationForMethod(method)%].Page[%=method.Name%]([%=TemplateProducer.getParamForMethodOffsetLimit(method)%]));
+        }
+		[%			}	
+		
+		%]
 		[%
 				} 
 			} 
@@ -149,7 +163,7 @@ namespace [%=TemplateProducer.Entity.Namespace%].Web.ApiControllers
                 if (old[%=entityName%] != null)
                 {
                     old[%=entityName%].EntityState = CodeFluent.Runtime.CodeFluentEntityState.ToBeDeleted;
-                    if (!old[%=entityName%].Delete())
+                    if (!old[%=entityName%].[%=TemplateProducer.getDeleteMethod()%]())
                     {
                         httpResponseMessage = BadRequest("{0} ne peut pas être supprimé.");
                     }
